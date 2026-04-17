@@ -1,0 +1,130 @@
+---
+title: 'Tugas Sistem Informasi Manajemen : Insight Data Coffe Chain Set'
+author: "Muhammad Rifqi Farrel Arrafi"
+date: "2026-04-16"
+output: html_document
+---
+---------------------------------------------------------------------
+#* Analisis Tren Musiman Produk setiap Bulan dari tahun 2012-2023 *
+---------------------------------------------------------------------
+
+# Latar belakang : 
+##Dalam data Coffe Chain set, produk-produk yang ada memiliki catatan penjualan setiap awal bulannya. Hal itu menjadi suatu insight yang menarik untuk dibahas karena dapat menjadi pertimbangan dalam pengambilan keputusan. Setiap jenis produk terdapat dugaan bahwa memiliki pola tertentu.
+
+# Rumusan Masalah :
+## 1) Apakah tipe produk kopi dan teh mengalami pola kenaikan, penurunan, atau stagnan di musim tertentu?
+## 2) Bagaimana efektivitas marketing terhadap profit di bulan/musim tertentu pada saat produk mengalami puncak penjualan?
+
+# A. Koneksi SQL ke RStudio
+```{r}
+library(odbc)
+library(DBI)
+odbcListDrivers()
+dbConnect(odbc(),
+          Driver = "MySQL ODBC 8.0 ANSI Driver",
+          Server = "127.0.0.1",
+          UID = "root",
+          PWD = "farelarrafi445",
+          Port = "3306")
+
+con1 = dbConnect(odbc(),
+                 Driver = "MySQL ODBC 8.0 ANSI Driver",
+                 Server = "127.0.0.1",
+                 UID = "root",
+                 PWD = "farelarrafi445",
+                 Port = "3306")
+
+con2 = dbConnect(odbc(),
+                 Driver = "MySQL ODBC 8.0 ANSI Driver",
+                 Server = "127.0.0.1",
+                 UID = "root",
+                 PWD = "farelarrafi445",
+                 Port = "3306",
+                 Database = "coffechains")
+```
+# B. Input tabel produk dan tabel catatan penjualan dalam skema "Coffe Chain Set"
+```{r}
+tabel_facttable <- dbGetQuery(con2, "select * from coffechains.facttable;")
+tabel_facttable
+
+tabel_produk <- dbGetQuery(con2, "select * from coffechains.product;")
+tabel_produk
+
+#Ringkasan statistik untuk tabel catatan penjualan
+summary(tabel_facttable)
+
+```
+
+# C. Analisis rumusan masalah
+## 1) Apakah profit penjualan tiap tipe produk kopi dan teh mengalami pola kenaikan, penurunan, atau stagnan di musim tertentu?
+```{r}
+#Dataset total pendapatan tipe produk Kopi selama 2013
+dataset_kopi_teh <- dbGetQuery(con2, "select monthname(Tanggal), Jenis_produk, sum(Penjualan) as total_pendapatan from (select f.`Date` as Tanggal, f.ProductId, p.`Product Type` as Jenis_produk, p.Product, sum(f.Sales) as Penjualan from facttable f
+join product p on f.ProductId = p.ProductId
+where p.`Product Type` in ('Tea', 'Coffee') and year(f.Date) = 2013
+group by p.Product, f.ProductId, p.`Product Type`, Tanggal
+order by f.ProductId) as total_penjualan_teh
+group by Jenis_produk, Tanggal;")
+
+
+#Total pendapatan produk kopi dan teh
+dataset_kopi_teh
+
+#Urutan dataset berdasarkan bulan
+dataset_kopi_teh$`monthname(Tanggal)` <- factor(dataset_kopi_teh$`monthname(Tanggal)`, levels = month.name)
+
+#Line chart untuk melihat tren penjualan produk kopi dan teh selama tahun 2013
+library(ggplot2)
+timeseries_line <- ggplot(dataset_kopi_teh, aes(x = `monthname(Tanggal)`, y = total_pendapatan, group = Jenis_produk, color = Jenis_produk)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Tren Penjualan Produk Kopi dan Teh selama Tahun 2013",
+       x = "Bulan",
+       y = "Total Pendapatan") +
+  theme_minimal() +
+  scale_color_manual(values = c("Coffee" = "brown", "Tea" = "green")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+timeseries_line
+
+```
+#Interpretasi grafik : Tren pendapatan produk Kopi dan Teh mempunyai pola yang cenderung mirip, tetapi sedikit berbeda. Kemiripan pola dapat dilihat dari pola pada awal tahun (bulan Januari - April). Pendapatan kedua produk mengalami penurunan pada bulan Februari karena berakhirnya musim dingin. Pendapatan perlahan mengalami kenaikan hingga bulan April, kemudian pendapatan turun di bulan Mei. Puncak pendapatan kedua produk berada di bulan yang berbeda, produk kopi mengalami puncak penjualan di bulan Juli, sedangkan produk Teh mengalami puncak penjualan di bulan September.Selain pola tersebut, pola yang cukup menarik dari kedua produk dapat ditinjau di penjualan akhir tahun (bulan November-Desember).  Pola tersebut mungkin disebabkan karena adanya musim dingin / salju yang menyebabkan banyak masyarakat mulai mengonsumsi minuman hangat, dalam hal ini adalah produk kopi dan teh.
+
+# Uji Normalitas Shapiro Wilk Data Produk Kopi dan Teh
+##Uji normalitas antara 2 data produk bertujuan untuk mengetahui normalitas kedua data dan menentukan uji yang sesuai dengan normalitasnya (parametrik jika normal dan nonparametrik jika tidak normal)
+```{r}
+dataset_kopi <- dbGetQuery(con2,"select monthname(Tanggal), Jenis_produk, sum(Penjualan) as total_pendapatan from (select f.`Date` as Tanggal, f.ProductId, p.`Product Type` as Jenis_produk, p.Product, sum(f.Sales) as Penjualan from facttable f
+join product p on f.ProductId = p.ProductId
+where p.`Product Type` in ('Coffee') and year(f.Date) = 2013
+group by p.Product, f.ProductId, p.`Product Type`, Tanggal
+order by f.ProductId) as total_penjualan_teh
+group by Jenis_produk, Tanggal;")
+
+dataset_teh <- dbGetQuery(con2,"select monthname(Tanggal), Jenis_produk, sum(Penjualan) as total_pendapatan from (select f.`Date` as Tanggal, f.ProductId, p.`Product Type` as Jenis_produk, p.Product, sum(f.Sales) as Penjualan from facttable f
+join product p on f.ProductId = p.ProductId
+where p.`Product Type` in ('Tea') and year(f.Date) = 2013
+group by p.Product, f.ProductId, p.`Product Type`, Tanggal
+order by f.ProductId) as total_penjualan_teh
+group by Jenis_produk, Tanggal;")
+
+
+#Uji normalitas dataset kopi
+uji_normalitas_kopi <- shapiro.test(dataset_kopi$total_pendapatan)
+#Interpretasi hasil uji
+cat(ifelse(uji_normalitas_kopi$p.value > 0.05, "Data Produk Kopi Berdistribusi Normal", "Data Produk Kopi Tidak Berdistribusi Normal"))
+
+#Uji normalitas dataset teh
+uji_normalitas_teh <- shapiro.test(dataset_teh$total_pendapatan)
+#Interpretasi hasil uji
+cat(ifelse(uji_normalitas_teh$p.value > 0.05, "Data Produk Teh Berdistribusi Normal", "Data Produk Teh Tidak Berdistribusi Normal"))
+
+```
+
+# Uji t berpasangan untuk dataset kopi dan teh
+```{r}
+#Uji t berpasangan untuk dataset kopi dan teh
+uji_t_berpasangan <- t.test(dataset_kopi$total_pendapatan, dataset_teh$total_pendapatan, paired = TRUE)
+#Interpretasi hasil uji t berpasangan
+cat(ifelse(uji_t_berpasangan$p.value < 0.05, "Terdapat Perbedaan Signifikan antara Pendapatan Produk Kopi dan Teh", "Tidak Terdapat Perbedaan Signifikan antara Pendapatan Produk Kopi dan Teh"))
+
+```

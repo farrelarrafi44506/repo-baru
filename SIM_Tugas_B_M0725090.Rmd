@@ -5,7 +5,7 @@ date: "2026-04-16"
 output: html_document
 ---
 ---------------------------------------------------------------------
-#* Analisis Tren Musiman Produk setiap Bulan dari tahun 2012-2023 *
+# * Analisis Tren Musiman Produk setiap Bulan dari tahun 2012-2023 *
 ---------------------------------------------------------------------
 
 # Latar belakang : 
@@ -88,6 +88,7 @@ timeseries_line <- ggplot(dataset_kopi_teh, aes(x = `monthname(Tanggal)`, y = to
 timeseries_line
 
 ```
+
 #Interpretasi grafik : Tren pendapatan produk Kopi dan Teh mempunyai pola yang cenderung mirip, tetapi sedikit berbeda. Kemiripan pola dapat dilihat dari pola pada awal tahun (bulan Januari - April). Pendapatan kedua produk mengalami penurunan pada bulan Februari karena berakhirnya musim dingin. Pendapatan perlahan mengalami kenaikan hingga bulan April, kemudian pendapatan turun di bulan Mei. Puncak pendapatan kedua produk berada di bulan yang berbeda, produk kopi mengalami puncak penjualan di bulan Juli, sedangkan produk Teh mengalami puncak penjualan di bulan September.Selain pola tersebut, pola yang cukup menarik dari kedua produk dapat ditinjau di penjualan akhir tahun (bulan November-Desember).  Pola tersebut mungkin disebabkan karena adanya musim dingin / salju yang menyebabkan banyak masyarakat mulai mengonsumsi minuman hangat, dalam hal ini adalah produk kopi dan teh.
 
 # Uji Normalitas Shapiro Wilk Data Produk Kopi dan Teh
